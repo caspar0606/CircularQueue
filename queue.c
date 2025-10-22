@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include "queue.h"
 
@@ -15,7 +16,7 @@ Queue* makeQ() {
 
 void enQ(Queue *Q, void *gate) {
 	if (!Q || !gate) {
-		perror("enQ: Null Queue/gates Pointer");
+		fprintf(stderr, "growQ: null Queue/Gate*\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -23,8 +24,8 @@ void enQ(Queue *Q, void *gate) {
 		growQ(Q);
 	}
 
-	Q->rear = (Q->rear + 1) % Q->n;
 	Q->array[Q->rear] = gate;
+	Q->rear = (Q->rear + 1) % Q->cap;
 	Q->n++;
 
 	return;
@@ -32,48 +33,48 @@ void enQ(Queue *Q, void *gate) {
 
 void* deQ(Queue *Q) {
 	if (!Q || (Q->n < 1)) {
-		perror("deQ: Null/Empty Queue");
+		fprintf(stderr, "growQ: null/empty Queue*\n");
 		exit(EXIT_FAILURE);
 	}
 	void* ptr = Q->array[Q->front];
-	Q->front = (Q->front + 1) % Q->n;
+	Q->front = (Q->front + 1) % Q->cap;
+    Q->n--;
 	return ptr;
 }
 
 void emptyQ(Queue *Q) {
 	if (!Q) {
-		perror("emptyQ: Null Queue Pointer");
+		fprintf(stderr, "growQ: null Queue*\n");
 		exit(EXIT_FAILURE);
 	}
 
 	for (int i = 0; i < Q->n; i++) {
-		if (Q->array[i]) {
-			free(Q->array[i]);
-		}
+        free(Q->array[i]);
 	}
 	return;
 }
 
 void growQ(Queue *Q) {
 	if (!Q) {
-		perror("growQ: Null Queue Pointer");
+		fprintf(stderr, "growQ: null Queue*\n");
 		exit(EXIT_FAILURE);
 	}
 
-	void **tmp = xrealloc(Q->array, sizeof(void*)*Q->cap*2);
-	if (!tmp) {
-		perror("growQ: realloc failed");
+    int new_cap = Q->cap * 2;
+	void **new = malloc(sizeof(void*) * new_cap);
+
+	if (!new) {
+		perror("growQ: malloc failed");
 		exit(EXIT_FAILURE);
 	}
-	Q->cap *= 2;
 
 	for (int i = 0; i < Q->n; i++) {
-		if (Q->array[i]) {
-			tmp[i] = Q->array[(Q->front + i) % Q->cap];
-		}
+        new[i] = Q->array[(Q->front + i) % Q->cap];
 	}
-	free(Q->array);
-	Q->array = tmp;
+
+    free(Q->array);
+    Q->cap = new_cap;
+	Q->array = new;
 	Q->front = 0;
 	Q->rear = Q->n;
 	return;
